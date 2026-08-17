@@ -1,0 +1,23 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Environment files
+.env
+
+# Raw/private data
+data/raw/
+
+# Generated processed data
+data/processed/
+
+# Generated reports
+reports/
+
+# IDE files
+.vscode/
+.idea/
