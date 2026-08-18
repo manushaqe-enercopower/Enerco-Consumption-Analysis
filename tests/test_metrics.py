@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 
 from src.metrics import (
+    _calculate_company_hourly_profiles,
+    _calculate_meter_hourly_profiles,
     calculate_profile_metrics,
 )
 
@@ -198,3 +200,100 @@ def test_zero_mean_does_not_create_infinite_ratios():
     assert np.isnan(result["cv"])
 
     assert np.isnan(result["load_factor"])
+
+
+def test_company_hourly_profiles_create_all_day_types():
+    weekday = _hourly_day(
+        "2025-07-04",
+        peak_value=20.0,
+        off_peak_value=10.0,
+    )
+
+    weekend = _hourly_day(
+        "2025-07-05",
+        peak_value=10.0,
+        off_peak_value=5.0,
+    )
+
+    data = pd.concat(
+        [
+            weekday,
+            weekend,
+        ],
+        ignore_index=True,
+    )
+
+    data["company_code"] = "Kompania 1"
+
+    result = _calculate_company_hourly_profiles(data)
+
+    assert set(result["profile_type"].unique()) == {
+        "all_days",
+        "weekday",
+        "weekend",
+    }
+
+    assert len(result[result["profile_type"] == "all_days"]) == 24
+
+    assert {
+        "mean_kwh",
+        "median_kwh",
+        "p10_kwh",
+        "p90_kwh",
+    }.issubset(result.columns)
+
+
+def test_meter_hourly_profiles_keep_meters_separate():
+    meter_1 = _hourly_day(
+        "2025-07-01",
+        peak_value=20.0,
+        off_peak_value=10.0,
+    )
+
+    meter_1["company_code"] = "Kompania 1"
+
+    meter_1["meter_id"] = "Meter 1"
+
+    meter_1["source_sheet"] = "Test"
+
+    meter_1["source_column"] = "Meter 1 Column"
+
+    meter_2 = _hourly_day(
+        "2025-07-01",
+        peak_value=40.0,
+        off_peak_value=20.0,
+    )
+
+    meter_2["company_code"] = "Kompania 1"
+
+    meter_2["meter_id"] = "Meter 2"
+
+    meter_2["source_sheet"] = "Test"
+
+    meter_2["source_column"] = "Meter 2 Column"
+
+    data = pd.concat(
+        [
+            meter_1,
+            meter_2,
+        ],
+        ignore_index=True,
+    )
+
+    result = _calculate_meter_hourly_profiles(data)
+
+    assert result["meter_id"].nunique() == 2
+
+    assert len(result) == 48
+
+    meter_1_hour_12 = result[
+        (result["meter_id"] == "Meter 1") & (result["hour"] == 12)
+    ].iloc[0]
+
+    meter_2_hour_12 = result[
+        (result["meter_id"] == "Meter 2") & (result["hour"] == 12)
+    ].iloc[0]
+
+    assert meter_1_hour_12["mean_kwh"] == 20.0
+
+    assert meter_2_hour_12["mean_kwh"] == 40.0

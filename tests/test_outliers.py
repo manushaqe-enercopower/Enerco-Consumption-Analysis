@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from src.outliers import (
+    build_final_outlier_report,
     create_company_outlier_summary,
     detect_company_hourly_outliers,
 )
@@ -109,7 +110,11 @@ def test_summary_counts_company_outliers():
                     "2026-01-01",
                 ]
             ),
-            "hour": [1, 2, 1],
+            "hour": [
+                1,
+                2,
+                1,
+            ],
             "timestamp": pd.to_datetime(
                 [
                     "2026-01-01 00:00",
@@ -128,7 +133,11 @@ def test_summary_counts_company_outliers():
     outliers = pd.DataFrame(
         {
             "company_code": ["Kompania 1"],
-            "timestamp": pd.to_datetime(["2026-01-01 01:00"]),
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01 01:00",
+                ]
+            ),
             "absolute_z_score": [4.5],
         }
     )
@@ -175,3 +184,185 @@ def test_no_infinite_z_scores():
             pd.Series(dtype=float),
         )
     ).any()
+
+
+def test_final_report_adds_required_fields():
+    hourly = pd.DataFrame(
+        {
+            "company_code": ["Kompania 1"],
+            "date": pd.to_datetime(
+                [
+                    "2026-01-01",
+                ]
+            ),
+            "hour": [10],
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01 09:00",
+                ]
+            ),
+            "energy_kwh": [100.0],
+            "company_mean_kwh": [20.0],
+            "company_std_kwh": [10.0],
+            "z_score": [8.0],
+            "absolute_z_score": [8.0],
+            "outlier_direction": ["high"],
+            "z_threshold": [3.0],
+        }
+    )
+
+    summary = pd.DataFrame(
+        {
+            "company_code": ["Kompania 1"],
+            "total_hours": [8760],
+            "outlier_hours": [20],
+            "max_abs_z_score": [8.0],
+            "outlier_percent": [0.23],
+        }
+    )
+
+    result = build_final_outlier_report(
+        hourly,
+        summary,
+    )
+
+    assert "severity" in result.columns
+    assert "reason" in result.columns
+    assert "recommendation" in result.columns
+
+    assert result.iloc[0]["severity"] == "critical"
+
+    assert result.iloc[0]["recommendation"] == "Per shqyrtim teknik"
+
+
+def test_repeated_outliers_trigger_technical_review():
+    hourly = pd.DataFrame(
+        {
+            "company_code": ["Kompania 1"],
+            "date": pd.to_datetime(
+                [
+                    "2026-01-01",
+                ]
+            ),
+            "hour": [10],
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01 09:00",
+                ]
+            ),
+            "energy_kwh": [50.0],
+            "company_mean_kwh": [20.0],
+            "company_std_kwh": [10.0],
+            "z_score": [3.2],
+            "absolute_z_score": [3.2],
+            "outlier_direction": ["high"],
+            "z_threshold": [3.0],
+        }
+    )
+
+    summary = pd.DataFrame(
+        {
+            "company_code": ["Kompania 1"],
+            "total_hours": [8760],
+            "outlier_hours": [200],
+            "max_abs_z_score": [3.2],
+            "outlier_percent": [2.28],
+        }
+    )
+
+    result = build_final_outlier_report(
+        hourly,
+        summary,
+    )
+
+    assert result.iloc[0]["recommendation"] == "Per shqyrtim teknik"
+
+
+def test_moderate_outlier_not_automatically_error():
+    hourly = pd.DataFrame(
+        {
+            "company_code": ["Kompania 1"],
+            "date": pd.to_datetime(
+                [
+                    "2026-01-01",
+                ]
+            ),
+            "hour": [10],
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01 09:00",
+                ]
+            ),
+            "energy_kwh": [50.0],
+            "company_mean_kwh": [20.0],
+            "company_std_kwh": [10.0],
+            "z_score": [3.2],
+            "absolute_z_score": [3.2],
+            "outlier_direction": ["high"],
+            "z_threshold": [3.0],
+        }
+    )
+
+    summary = pd.DataFrame(
+        {
+            "company_code": ["Kompania 1"],
+            "total_hours": [8760],
+            "outlier_hours": [5],
+            "max_abs_z_score": [3.2],
+            "outlier_percent": [0.06],
+        }
+    )
+
+    result = build_final_outlier_report(
+        hourly,
+        summary,
+    )
+
+    assert result.iloc[0]["severity"] == "moderate"
+
+    assert "sjellje biznesi legjitime" in result.iloc[0]["recommendation"]
+
+
+def test_high_outlier_requires_operational_verification():
+    hourly = pd.DataFrame(
+        {
+            "company_code": ["Kompania 1"],
+            "date": pd.to_datetime(
+                [
+                    "2026-01-01",
+                ]
+            ),
+            "hour": [10],
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01 09:00",
+                ]
+            ),
+            "energy_kwh": [50.0],
+            "company_mean_kwh": [20.0],
+            "company_std_kwh": [10.0],
+            "z_score": [4.5],
+            "absolute_z_score": [4.5],
+            "outlier_direction": ["high"],
+            "z_threshold": [3.0],
+        }
+    )
+
+    summary = pd.DataFrame(
+        {
+            "company_code": ["Kompania 1"],
+            "total_hours": [8760],
+            "outlier_hours": [5],
+            "max_abs_z_score": [4.5],
+            "outlier_percent": [0.06],
+        }
+    )
+
+    result = build_final_outlier_report(
+        hourly,
+        summary,
+    )
+
+    assert result.iloc[0]["severity"] == "high"
+
+    assert result.iloc[0]["recommendation"] == "Per verifikim operacional"

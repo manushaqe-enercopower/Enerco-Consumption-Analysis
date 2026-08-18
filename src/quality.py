@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.config import PROFILE_END, PROFILE_START
 from src.loader import load_sheet
 
 EXPECTED_HOURS = set(range(1, 25))
@@ -158,9 +159,30 @@ def analyze_meter(
 
     missing_hours = int(numeric.isna().sum())
 
-    missing_percent = (missing_hours / total_hours) * 100 if total_hours else 100.0
+    missing_percent = missing_hours / total_hours * 100 if total_hours else 100.0
+
+    # ---------------------------------------------------------
+    # Annual profile-window completeness
+    # July 2025 -> June 2026, as defined by the methodology.
+    # ---------------------------------------------------------
+    profile_mask = dates.notna() & (dates >= PROFILE_START) & (dates < PROFILE_END)
+
+    profile_values = numeric.loc[profile_mask].reset_index(drop=True)
+
+    profile_total_hours = len(profile_values)
+
+    profile_missing_hours = int(profile_values.isna().sum())
+
+    profile_missing_percent = (
+        profile_missing_hours / profile_total_hours * 100
+        if profile_total_hours
+        else 100.0
+    )
+
+    profile_observed_hours = int(profile_values.notna().sum())
 
     valid_mask = numeric.notna()
+
     valid_positions = np.flatnonzero(valid_mask.to_numpy())
 
     if len(valid_positions) == 0:
@@ -171,9 +193,11 @@ def analyze_meter(
         active_span_hours = 0
 
         leading_missing_hours = total_hours
+
         trailing_missing_hours = 0
 
         internal_missing_hours = total_hours
+
         internal_missing_percent = 100.0
 
         coverage_percent = 0.0
@@ -228,13 +252,23 @@ def analyze_meter(
 
     zero_run_indices = []
 
-    for start, end, _ in long_zero_runs:
-        zero_run_indices.extend(range(start, end + 1))
+    for (
+        start,
+        end,
+        _,
+    ) in long_zero_runs:
+        zero_run_indices.extend(
+            range(
+                start,
+                end + 1,
+            )
+        )
 
     if zero_run_indices:
         zero_dates = dates.iloc[zero_run_indices]
 
         zero_run_day_count = int(zero_dates.dropna().dt.normalize().nunique())
+
     else:
         zero_run_day_count = 0
 
@@ -248,10 +282,16 @@ def analyze_meter(
         extreme_threshold = mean_consumption * 50
 
         extreme_value_count = int((numeric > extreme_threshold).sum())
+
     else:
         extreme_value_count = 0
 
-    if len(valid_positions) == 0 or internal_missing_percent > 10:
+    # ---------------------------------------------------------
+    # Methodology reliability rule:
+    # >10% missing within the annual profile window
+    # means unusable for annual profile analysis.
+    # ---------------------------------------------------------
+    if profile_observed_hours == 0 or profile_missing_percent > 10:
         quality_status = "unusable"
 
     elif negative_count > 0 or zero_run_count > 0 or extreme_value_count > 0:
@@ -264,34 +304,45 @@ def analyze_meter(
         **metadata,
         "total_hours": total_hours,
         "observed_hours": observed_hours,
-        "missing_hours": missing_hours,
+        "missing_hours": (missing_hours),
         "missing_percent": round(
             missing_percent,
             4,
         ),
-        "first_valid_timestamp": first_valid_timestamp,
-        "last_valid_timestamp": last_valid_timestamp,
-        "active_span_hours": active_span_hours,
-        "leading_missing_hours": leading_missing_hours,
-        "trailing_missing_hours": trailing_missing_hours,
-        "internal_missing_hours": internal_missing_hours,
-        "internal_missing_percent": round(
-            internal_missing_percent,
-            4,
+        "profile_total_hours": (profile_total_hours),
+        "profile_observed_hours": (profile_observed_hours),
+        "profile_missing_hours": (profile_missing_hours),
+        "profile_missing_percent": (
+            round(
+                profile_missing_percent,
+                4,
+            )
+        ),
+        "first_valid_timestamp": (first_valid_timestamp),
+        "last_valid_timestamp": (last_valid_timestamp),
+        "active_span_hours": (active_span_hours),
+        "leading_missing_hours": (leading_missing_hours),
+        "trailing_missing_hours": (trailing_missing_hours),
+        "internal_missing_hours": (internal_missing_hours),
+        "internal_missing_percent": (
+            round(
+                internal_missing_percent,
+                4,
+            )
         ),
         "coverage_percent": round(
             coverage_percent,
             4,
         ),
-        "coverage_status": coverage_status,
-        "negative_count": negative_count,
-        "zero_run_count_over_48h": zero_run_count,
-        "zero_run_day_count": zero_run_day_count,
-        "max_zero_run_hours": max_zero_run_hours,
-        "extreme_value_count": extreme_value_count,
-        "mean_kwh": mean_consumption,
-        "max_kwh": max_consumption,
-        "quality_status": quality_status,
+        "coverage_status": (coverage_status),
+        "negative_count": (negative_count),
+        "zero_run_count_over_48h": (zero_run_count),
+        "zero_run_day_count": (zero_run_day_count),
+        "max_zero_run_hours": (max_zero_run_hours),
+        "extreme_value_count": (extreme_value_count),
+        "mean_kwh": (mean_consumption),
+        "max_kwh": (max_consumption),
+        "quality_status": (quality_status),
     }
 
 

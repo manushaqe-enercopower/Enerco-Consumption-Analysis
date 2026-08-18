@@ -4,8 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PROFILE_START = pd.Timestamp("2025-07-01")
-PROFILE_END = pd.Timestamp("2026-07-01")
+from src.config import PROFILE_END, PROFILE_START
 
 PEAK_HOURS = set(range(7, 19))
 
@@ -506,6 +505,202 @@ def _calculate_company_profiles(
     )
 
 
+def _calculate_company_hourly_profiles(
+    company_hourly: pd.DataFrame,
+) -> pd.DataFrame:
+    data = _prepare_hourly_data(company_hourly)
+
+    data = data.dropna(
+        subset=[
+            "energy_kwh",
+        ]
+    ).copy()
+
+    if data.empty:
+        return pd.DataFrame(
+            columns=[
+                "company_code",
+                "profile_type",
+                "hour",
+                "observations",
+                "mean_kwh",
+                "median_kwh",
+                "p10_kwh",
+                "p90_kwh",
+            ]
+        )
+
+    data["day_type"] = np.where(
+        data["date"].dt.dayofweek < 5,
+        "weekday",
+        "weekend",
+    )
+
+    def aggregate_profile(
+        profile_data: pd.DataFrame,
+        profile_type: str,
+    ) -> pd.DataFrame:
+        profile = (
+            profile_data.groupby(
+                [
+                    "company_code",
+                    "hour",
+                ]
+            )
+            .agg(
+                observations=(
+                    "energy_kwh",
+                    "count",
+                ),
+                mean_kwh=(
+                    "energy_kwh",
+                    "mean",
+                ),
+                median_kwh=(
+                    "energy_kwh",
+                    "median",
+                ),
+                p10_kwh=(
+                    "energy_kwh",
+                    lambda x: x.quantile(0.10),
+                ),
+                p90_kwh=(
+                    "energy_kwh",
+                    lambda x: x.quantile(0.90),
+                ),
+            )
+            .reset_index()
+        )
+
+        profile["profile_type"] = profile_type
+
+        return profile
+
+    overall = aggregate_profile(
+        data,
+        "all_days",
+    )
+
+    weekday = aggregate_profile(
+        data[data["day_type"] == "weekday"],
+        "weekday",
+    )
+
+    weekend = aggregate_profile(
+        data[data["day_type"] == "weekend"],
+        "weekend",
+    )
+
+    result = pd.concat(
+        [
+            overall,
+            weekday,
+            weekend,
+        ],
+        ignore_index=True,
+    )
+
+    return (
+        result[
+            [
+                "company_code",
+                "profile_type",
+                "hour",
+                "observations",
+                "mean_kwh",
+                "median_kwh",
+                "p10_kwh",
+                "p90_kwh",
+            ]
+        ]
+        .sort_values(
+            [
+                "company_code",
+                "profile_type",
+                "hour",
+            ]
+        )
+        .reset_index(drop=True)
+    )
+
+
+def _calculate_meter_hourly_profiles(
+    data: pd.DataFrame,
+) -> pd.DataFrame:
+    prepared = _prepare_hourly_data(data)
+
+    prepared = prepared.dropna(
+        subset=[
+            "energy_kwh",
+        ]
+    ).copy()
+
+    columns = [
+        "company_code",
+        "meter_id",
+        "source_sheet",
+        "source_column",
+        "hour",
+        "observations",
+        "mean_kwh",
+        "median_kwh",
+        "p10_kwh",
+        "p90_kwh",
+    ]
+
+    if prepared.empty:
+        return pd.DataFrame(columns=columns)
+
+    profile = (
+        prepared.groupby(
+            [
+                "company_code",
+                "meter_id",
+                "source_sheet",
+                "source_column",
+                "hour",
+            ]
+        )
+        .agg(
+            observations=(
+                "energy_kwh",
+                "count",
+            ),
+            mean_kwh=(
+                "energy_kwh",
+                "mean",
+            ),
+            median_kwh=(
+                "energy_kwh",
+                "median",
+            ),
+            p10_kwh=(
+                "energy_kwh",
+                lambda x: x.quantile(0.10),
+            ),
+            p90_kwh=(
+                "energy_kwh",
+                lambda x: x.quantile(0.90),
+            ),
+        )
+        .reset_index()
+    )
+
+    return (
+        profile[columns]
+        .sort_values(
+            [
+                "company_code",
+                "meter_id",
+                "source_sheet",
+                "source_column",
+                "hour",
+            ]
+        )
+        .reset_index(drop=True)
+    )
+
+
 def _add_meter_similarity_flags(
     meter_profiles: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -598,6 +793,7 @@ def run_profile_analysis(
 
     meter_profile_parts = []
     meter_monthly_parts = []
+    meter_hourly_profile_parts = []
     company_hourly_parts = []
 
     required_columns = [
@@ -653,6 +849,8 @@ def run_profile_analysis(
 
         print(f"  Consumption meters used: " f"{after_count}/{before_count}")
 
+        meter_hourly_profiles = _calculate_meter_hourly_profiles(data)
+
         (
             meter_profiles,
             meter_monthly,
@@ -661,6 +859,8 @@ def run_profile_analysis(
         meter_profile_parts.append(meter_profiles)
 
         meter_monthly_parts.append(meter_monthly)
+
+        meter_hourly_profile_parts.append(meter_hourly_profiles)
 
         company_hourly_parts.append(_aggregate_company_hourly(data))
 
@@ -673,6 +873,45 @@ def run_profile_analysis(
         meter_monthly_parts,
         ignore_index=True,
     )
+
+    meter_hourly_profile_df = pd.concat(
+        meter_hourly_profile_parts,
+        ignore_index=True,
+    )
+
+    meter_key_columns = [
+        "company_code",
+        "meter_id",
+        "source_sheet",
+        "source_column",
+    ]
+
+    profile_meter_keys = set(
+        map(
+            tuple,
+            meter_profiles_df[meter_key_columns].drop_duplicates().to_numpy(),
+        )
+    )
+
+    hourly_meter_keys = set(
+        map(
+            tuple,
+            meter_hourly_profile_df[meter_key_columns].drop_duplicates().to_numpy(),
+        )
+    )
+
+    if profile_meter_keys != hourly_meter_keys:
+        missing_hourly = profile_meter_keys - hourly_meter_keys
+
+        unexpected_hourly = hourly_meter_keys - profile_meter_keys
+
+        raise ValueError(
+            "Meter hourly profile population does not match "
+            "the Hapi 3 meter profile population. "
+            f"Missing hourly meters: {len(missing_hourly)}; "
+            f"unexpected hourly meters: "
+            f"{len(unexpected_hourly)}."
+        )
 
     company_hourly = pd.concat(
         company_hourly_parts,
@@ -693,6 +932,8 @@ def run_profile_analysis(
         company_profiles_df,
         company_monthly_df,
     ) = _calculate_company_profiles(company_hourly)
+
+    company_hourly_profile_df = _calculate_company_hourly_profiles(company_hourly)
 
     meter_profiles_df = _add_meter_similarity_flags(meter_profiles_df)
 
@@ -746,6 +987,16 @@ def run_profile_analysis(
         index=False,
     )
 
+    company_hourly_profile_df.to_parquet(
+        output_dir / "company_hourly_profile.parquet",
+        index=False,
+    )
+
+    meter_hourly_profile_df.to_parquet(
+        output_dir / "meter_hourly_profile.parquet",
+        index=False,
+    )
+
     with pd.ExcelWriter(
         report_path,
         engine="openpyxl",
@@ -773,6 +1024,17 @@ def run_profile_analysis(
             sheet_name="Meter Monthly",
             index=False,
         )
+        company_hourly_profile_df.to_excel(
+            writer,
+            sheet_name="Company Hourly",
+            index=False,
+        )
+
+        meter_hourly_profile_df.to_excel(
+            writer,
+            sheet_name="Meter Hourly",
+            index=False,
+        )
 
     print()
     print("=" * 60)
@@ -795,6 +1057,8 @@ def run_profile_analysis(
         "meter_profiles": (meter_profiles_df),
         "company_monthly": (company_monthly_df),
         "meter_monthly": (meter_monthly_df),
+        "company_hourly_profile": (company_hourly_profile_df),
+        "meter_hourly_profile": (meter_hourly_profile_df),
     }
 
 
