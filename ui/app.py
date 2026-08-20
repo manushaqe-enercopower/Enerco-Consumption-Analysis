@@ -18,7 +18,6 @@ OUTLIER_SUMMARY_PATH = OUTLIERS_DIR / "company_outlier_summary.parquet"
 
 st.set_page_config(
     page_title="EnerCo Consumption Analytics",
-    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -268,42 +267,34 @@ pages = {
         st.Page(
             overview_page,
             title="Përmbledhje",
-            icon="🏠",
         ),
         st.Page(
             "pages/data_quality.py",
             title="Cilësia e të dhënave",
-            icon="✅",
         ),
         st.Page(
             "pages/company_profiles.py",
             title="Profilet e kompanive",
-            icon="📈",
         ),
         st.Page(
             "pages/meter_analysis.py",
             title="Analiza e njehsorëve",
-            icon="⚡",
         ),
         st.Page(
             "pages/outliers.py",
             title="Outlier-at",
-            icon="⚠️",
         ),
         st.Page(
             "pages/clustering.py",
             title="Klasterizimi",
-            icon="🧩",
         ),
         st.Page(
             "pages/prosumers.py",
             title="Prosumerët",
-            icon="☀️",
         ),
         st.Page(
             "pages/external_factors.py",
             title="Faktorët shtesë",
-            icon="🌡️",
         ),
     ],
 }
