@@ -29,7 +29,7 @@ company_summary = read_parquet(str(SUMMARY_PATH))
 st.title("Analiza e outlier-ave")
 
 st.caption(
-    "Hapi 4 — identifikimi i konsumit orar jo të zakonshëm "
+    "Identifikimi i konsumit orar jo të zakonshëm "
     "në nivel kompanie duke përdorur Z-score."
 )
 
@@ -638,7 +638,7 @@ with methodology_tab:
         "nga hapat paraprakë të pipeline-it."
     )
 
-    st.markdown("### Hapi 4.1 — Outlier-at orarë")
+    st.markdown("### Outlier-at orarë")
 
     st.markdown("""
 Procesi i analizës është:
@@ -698,7 +698,7 @@ Procesi i analizës është:
 
     st.divider()
 
-    st.markdown("### Hapi 4.2 — Krahasimi sipas sektorit")
+    st.markdown("### Krahasimi sipas sektorit")
 
     st.warning(
         "Hapi 4.2 nuk është ekzekutuar sepse mapping-u i kompanive "
@@ -713,7 +713,7 @@ Procesi i analizës është:
 
     st.divider()
 
-    st.markdown("### Hapi 4.3 — Raporti final")
+    st.markdown("### Raporti final")
 
     st.markdown(
         "Për secilin outlier të vlefshëm, pipeline-i final ruan "

@@ -751,7 +751,7 @@ companies = sorted(
 st.title("Profilet e konsumit të kompanive")
 
 st.caption(
-    "Hapi 3 — karakterizimi i profilit vjetor të konsumit "
+    "Karakterizimi i profilit vjetor të konsumit "
     "për Korrik 2025 – Qershor 2026"
 )
 

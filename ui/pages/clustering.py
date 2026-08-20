@@ -44,7 +44,7 @@ best_silhouette = float(best_k_row["silhouette_score"])
 st.title("Analiza e klasterizimit")
 
 st.caption(
-    "Hapi 6 — grupimi i kompanive sipas karakteristikave të profilit " "të konsumit."
+    "Grupimi i kompanive sipas karakteristikave të profilit " "të konsumit."
 )
 
 
@@ -532,7 +532,7 @@ with methodology_tab:
     st.subheader("Metodologjia")
 
     st.markdown(
-        "Hapi 6 përdor **K-Means clustering** për të grupuar kompanitë "
+        "Kjo pjesë përdor **K-Means clustering** për të grupuar kompanitë "
         "sipas karakteristikave të profilit të tyre vjetor të konsumit."
     )
 

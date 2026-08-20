@@ -563,7 +563,7 @@ companies = sorted(
 
 st.title("Analiza e njehsorëve")
 st.caption(
-    "Hapi 3.7 — analiza e profileve të konsumit në nivel njehsori "
+    "Analiza e profileve të konsumit në nivel njehsori "
     "për Korrik 2025 – Qershor 2026"
 )
 
@@ -601,7 +601,7 @@ selected = company_profiles[
 with selector_cols[2]:
     st.caption(
         "Analiza përfshin vetëm njehsorët e konsumit që kalojnë filtrin "
-        "e cilësisë së Hapit 1. Krahasimi i ngjashmërisë bëhet brenda "
+        "e cilësisë. Krahasimi i ngjashmërisë bëhet brenda "
         "së njëjtës kompani."
     )
 
@@ -767,7 +767,7 @@ with comparison_tab:
         ),
         finding=(
             f"{selected_company} ka {meter_count} njehsorë të përdorshëm në "
-            "analizën e Hapit 3.7."
+            "këtë analizë."
         ),
     )
 
@@ -895,7 +895,7 @@ with similarity_tab:
     analysis_description(
         title="Ngjashmëria e profileve brenda kompanisë",
         description=(
-            "Backend-i i Hapit 3.7 klasifikon secilin njehsor si të ngjashëm, "
+            "Kjo pjesë klasifikon secilin njehsor si të ngjashëm, "
             "të ndryshëm ose si njehsor të vetëm të kompanisë."
         ),
         purpose=(
@@ -983,7 +983,7 @@ with table_tab:
     analysis_description(
         title="Tabela e njehsorëve",
         description=(
-            "Tabela përmbledh metrikat e Hapit 3.7 për të gjithë njehsorët e "
+            "Tabela përmbledh metrikat për të gjithë njehsorët e "
             "përdorshëm të konsumit."
         ),
         purpose=(

@@ -487,7 +487,7 @@ def main() -> None:
 
     print()
     print("=" * 60)
-    print("HAPI 1 - DATA QUALITY")
+    print("DATA QUALITY")
     print("=" * 60)
 
     print()

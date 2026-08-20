@@ -918,7 +918,7 @@ data = load_data()
 st.title("Faktorët shtesë")
 
 st.caption(
-    "Hapi 5 — analiza e tarifave, festave zyrtare " "dhe ndikimit të motit në konsum"
+    "Analiza e tarifave, festave zyrtare " "dhe ndikimit të motit në konsum"
 )
 
 

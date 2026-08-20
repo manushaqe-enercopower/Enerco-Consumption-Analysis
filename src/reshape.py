@@ -399,7 +399,7 @@ def reshape_workbook(
 
     print()
     print("=" * 60)
-    print("HAPI 2 - WIDE TO LONG")
+    print("WIDE TO LONG")
     print("=" * 60)
 
     print(f"Measurement series: " f"{total_series}")

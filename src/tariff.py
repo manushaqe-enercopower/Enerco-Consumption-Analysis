@@ -625,7 +625,7 @@ def run_tariff_analysis(
 
     print()
     print("=" * 60)
-    print("HAPI 5.3 - TARIFF ANALYSIS")
+    print("TARIFF ANALYSIS")
     print("=" * 60)
 
     print(f"Companies analyzed: " f"{tariff_data['company_code'].nunique()}")

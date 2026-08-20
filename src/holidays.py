@@ -747,7 +747,7 @@ def run_holiday_analysis(
 
     print()
     print("=" * 60)
-    print("HAPI 5.2 - HOLIDAY ANALYSIS")
+    print("HOLIDAY ANALYSIS")
     print("=" * 60)
 
     print(f"Companies analyzed: " f"{company_daily['company_code'].nunique()}")

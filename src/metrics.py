@@ -1038,7 +1038,7 @@ def run_profile_analysis(
 
     print()
     print("=" * 60)
-    print("HAPI 3 - CONSUMPTION PROFILE METRICS")
+    print("CONSUMPTION PROFILE METRICS")
     print("=" * 60)
 
     print(f"Companies analyzed: " f"{len(company_profiles_df)}")

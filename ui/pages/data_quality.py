@@ -218,7 +218,7 @@ unusable_count = int((meter_quality["quality_status"] == "unusable").sum())
 st.title("Kontrolli i cilësisë së të dhënave")
 
 st.caption(
-    "Hapi 1 — validimi i integritetit të të dhënave "
+    "Validimi i integritetit të të dhënave "
     "përpara llogaritjes së profileve të konsumit"
 )
 

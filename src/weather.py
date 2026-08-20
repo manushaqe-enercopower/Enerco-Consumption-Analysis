@@ -1098,7 +1098,7 @@ def run_weather_analysis(
 
     print()
     print("=" * 60)
-    print("HAPI 5.1 - WEATHER / HDD / CDD ANALYSIS")
+    print("WEATHER / HDD / CDD ANALYSIS")
     print("=" * 60)
 
     print(f"Companies analyzed: " f"{company_daily['company_code'].nunique()}")
