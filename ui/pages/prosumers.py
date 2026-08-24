@@ -20,6 +20,8 @@ PORTFOLIO_HOURLY_PROFILE_PATH = (
 )
 HOURLY_PATH = PROSUMERS_DIR / "prosumer_hourly.parquet"
 
+ALL_PROSUMERS = "Të gjithë prosumerët"
+
 
 @st.cache_data(show_spinner=False)
 def read_parquet(path: str) -> pd.DataFrame:
@@ -496,29 +498,63 @@ with prosumer_tab:
 
     selected_label = st.selectbox(
         "Zgjidh prosumerin",
-        options=prosumer_options["label"].tolist(),
+        options=[ALL_PROSUMERS, *prosumer_options["label"].tolist()],
         key="prosumer-selector",
     )
 
-    selected_row = prosumer_options[prosumer_options["label"] == selected_label].iloc[0]
+    all_prosumers_mode = selected_label == ALL_PROSUMERS
 
-    selected_company = selected_row["company_code"]
-    selected_meter = selected_row["meter_id"]
+    if all_prosumers_mode:
+        selected_company = f"{summary['company_code'].nunique()} kompani me prosumer"
+        selected_meter = ALL_PROSUMERS
 
-    selected_summary = summary[
-        (summary["company_code"] == selected_company)
-        & (summary["meter_id"] == selected_meter)
-    ].iloc[0]
+        selected_summary = pd.Series(
+            {
+                "total_consumption_kwh": float(summary["total_consumption_kwh"].sum()),
+                "total_injection_kwh": float(summary["total_injection_kwh"].sum()),
+                "net_grid_kwh": float(summary["net_grid_kwh"].sum()),
+                "injection_import_ratio_percent": (
+                    float(summary["total_injection_kwh"].sum())
+                    / float(summary["total_consumption_kwh"].sum())
+                    * 100
+                    if float(summary["total_consumption_kwh"].sum())
+                    else 0.0
+                ),
+                "net_export_hours": int(summary["net_export_hours"].sum()),
+            }
+        )
 
-    selected_monthly = monthly[
-        (monthly["company_code"] == selected_company)
-        & (monthly["meter_id"] == selected_meter)
-    ].copy()
+        selected_monthly = portfolio_monthly.copy()
+        selected_profile = portfolio_hourly_profile.copy()
 
-    selected_profile = hourly_profile[
-        (hourly_profile["company_code"] == selected_company)
-        & (hourly_profile["meter_id"] == selected_meter)
-    ].copy()
+        st.info(
+            f"Po shfaqet pamja e kombinuar për {len(summary)} njehsorë prosumer "
+            f"në {summary['company_code'].nunique()} kompani. "
+            "Kjo faqe nuk përfshin 81 kompanitë, sepse vetëm kompanitë me "
+            "matje A+/A- janë prosumerë."
+        )
+    else:
+        selected_row = prosumer_options[
+            prosumer_options["label"] == selected_label
+        ].iloc[0]
+
+        selected_company = selected_row["company_code"]
+        selected_meter = selected_row["meter_id"]
+
+        selected_summary = summary[
+            (summary["company_code"] == selected_company)
+            & (summary["meter_id"] == selected_meter)
+        ].iloc[0]
+
+        selected_monthly = monthly[
+            (monthly["company_code"] == selected_company)
+            & (monthly["meter_id"] == selected_meter)
+        ].copy()
+
+        selected_profile = hourly_profile[
+            (hourly_profile["company_code"] == selected_company)
+            & (hourly_profile["meter_id"] == selected_meter)
+        ].copy()
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -543,8 +579,15 @@ with prosumer_tab:
     )
 
     st.info(
-        f"Bilanci neto me rrjetin për **{selected_company} / {selected_meter}** "
-        f"është **{selected_summary['net_grid_kwh'] / 1000:.1f} MWh**."
+        (
+            f"Bilanci neto i kombinuar me rrjetin për të gjithë prosumerët "
+            f"është **{selected_summary['net_grid_kwh'] / 1000:.1f} MWh**."
+        )
+        if all_prosumers_mode
+        else (
+            f"Bilanci neto me rrjetin për **{selected_company} / {selected_meter}** "
+            f"është **{selected_summary['net_grid_kwh'] / 1000:.1f} MWh**."
+        )
     )
 
     st.divider()

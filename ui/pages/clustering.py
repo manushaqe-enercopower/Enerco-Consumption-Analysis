@@ -1,5 +1,6 @@
 from __future__ import annotations
 import plotly.express as px
+from io import BytesIO
 
 from pathlib import Path
 
@@ -10,6 +11,62 @@ UI_DIR = Path(__file__).resolve().parents[1]
 ROOT = UI_DIR.parent
 
 CLUSTERING_REPORT_PATH = ROOT / "reports" / "hapi_6_clustering.xlsx"
+
+
+def create_cluster_export(companies: pd.DataFrame) -> bytes:
+    output = BytesIO()
+
+    export_columns = [
+        "company_code",
+        "cluster_id",
+        "meter_count_used",
+        "peak_ratio",
+        "weekday_weekend_ratio",
+        "cv",
+        "load_factor",
+        "seasonality",
+        "seasonality_index",
+        "trend_percent",
+    ]
+
+    cluster_ids = sorted(companies["cluster_id"].dropna().unique())
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        for group_number, cluster_id in enumerate(cluster_ids, start=1):
+            group = (
+                companies[companies["cluster_id"] == cluster_id]
+                .copy()
+                .sort_values("company_number")
+            )
+
+            available_columns = [
+                column for column in export_columns if column in group.columns
+            ]
+
+            export_group = group[available_columns].rename(
+                columns={
+                    "company_code": "Kompania",
+                    "cluster_id": "Klasteri",
+                    "meter_count_used": "Njehsorë",
+                    "peak_ratio": "Peak / Off-Peak",
+                    "weekday_weekend_ratio": "Ditë Pune / Fundjavë",
+                    "cv": "CV",
+                    "load_factor": "Load Factor",
+                    "seasonality": "Sezonaliteti",
+                    "seasonality_index": "Indeksi sezonal",
+                    "trend_percent": "Trendi (%)",
+                }
+            )
+
+            export_group["Klasteri"] = group_number
+
+            export_group.to_excel(
+                writer,
+                sheet_name=f"Grupi_{group_number}",
+                index=False,
+            )
+
+    return output.getvalue()
 
 
 @st.cache_data(show_spinner=False)
@@ -43,9 +100,7 @@ best_silhouette = float(best_k_row["silhouette_score"])
 
 st.title("Analiza e klasterizimit")
 
-st.caption(
-    "Grupimi i kompanive sipas karakteristikave të profilit " "të konsumit."
-)
+st.caption("Grupimi i kompanive sipas karakteristikave të profilit " "të konsumit.")
 
 
 col1, col2, col3, col4 = st.columns(4)
@@ -486,6 +541,16 @@ with companies_tab:
                 format="%.2f%%",
             ),
         },
+    )
+
+    cluster_export = create_cluster_export(company_view)
+
+    st.download_button(
+        label="Eksporto grupet në Excel",
+        data=cluster_export,
+        file_name="kompanite_sipas_klasterit.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="cluster-export-excel",
     )
 
     st.divider()

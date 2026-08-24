@@ -917,9 +917,7 @@ data = load_data()
 
 st.title("Faktorët shtesë")
 
-st.caption(
-    "Analiza e tarifave, festave zyrtare " "dhe ndikimit të motit në konsum"
-)
+st.caption("Analiza e tarifave, festave zyrtare " "dhe ndikimit të motit në konsum")
 
 
 tariff_portfolio = data["tariff_portfolio"]
@@ -1213,6 +1211,38 @@ with holiday_tab:
 
     holiday_outliers = data["holiday_outliers"]
 
+    holiday_options = (
+        holiday_portfolio[
+            [
+                "date",
+                "holiday_name",
+            ]
+        ]
+        .drop_duplicates()
+        .sort_values("date")
+    )
+
+    holiday_options["label"] = (
+        holiday_options["date"].dt.strftime("%d %b %Y")
+        + " — "
+        + holiday_options["holiday_name"]
+    )
+
+    option_map = dict(
+        zip(
+            holiday_options["label"],
+            holiday_options["date"],
+        )
+    )
+
+    selected_label = st.selectbox(
+        "Zgjidh festën",
+        list(option_map.keys()),
+        key="holiday-selector",
+    )
+
+    selected_date = option_map[selected_label]
+
     (
         holiday_overview_tab,
         holiday_impact_tab,
@@ -1305,38 +1335,6 @@ with holiday_tab:
                 "në uljen ose rritjen e konsumit gjatë festës."
             ),
         )
-
-        holiday_options = (
-            holiday_portfolio[
-                [
-                    "date",
-                    "holiday_name",
-                ]
-            ]
-            .drop_duplicates()
-            .sort_values("date")
-        )
-
-        holiday_options["label"] = (
-            holiday_options["date"].dt.strftime("%d %b %Y")
-            + " — "
-            + holiday_options["holiday_name"]
-        )
-
-        option_map = dict(
-            zip(
-                holiday_options["label"],
-                holiday_options["date"],
-            )
-        )
-
-        selected_label = st.selectbox(
-            "Zgjidh festën",
-            list(option_map.keys()),
-            key="holiday-hourly-selector",
-        )
-
-        selected_date = option_map[selected_label]
 
         selected_hourly = data["holiday_hourly"][
             data["holiday_hourly"]["date"] == selected_date

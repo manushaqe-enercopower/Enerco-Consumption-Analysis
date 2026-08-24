@@ -230,18 +230,17 @@ def save_cluster_report(
             index=False,
         )
 
+        excluded_profiles.to_excel(
+            writer,
+            sheet_name="Excluded_Companies",
+            index=False,
+        )
+
         sector_status.to_excel(
             writer,
             sheet_name="Sector_Comparison_Status",
             index=False,
         )
-
-        if not excluded_profiles.empty:
-            excluded_profiles.to_excel(
-                writer,
-                sheet_name="Excluded_Companies",
-                index=False,
-            )
 
 
 def plot_clustering_evaluation(

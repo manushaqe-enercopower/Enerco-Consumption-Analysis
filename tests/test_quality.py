@@ -105,7 +105,7 @@ def test_zero_run_over_48_hours_requires_review():
     assert result["max_zero_run_hours"] == 49
 
 
-def test_leading_missing_values_inside_profile_window_are_unusable():
+def test_leading_missing_values_mark_partial_coverage_but_remain_clean():
     values = pd.Series([None] * 20 + [10.0] * 80)
 
     dates = pd.date_range(
@@ -126,7 +126,7 @@ def test_leading_missing_values_inside_profile_window_are_unusable():
         },
     )
 
-    assert result["quality_status"] == "unusable"
+    assert result["quality_status"] == "clean"
 
     assert result["coverage_status"] == "partial_period"
 

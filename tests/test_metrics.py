@@ -4,6 +4,7 @@ import pandas as pd
 from src.metrics import (
     _calculate_company_hourly_profiles,
     _calculate_meter_hourly_profiles,
+    _calculate_portfolio_profiles,
     calculate_profile_metrics,
 )
 
@@ -297,3 +298,54 @@ def test_meter_hourly_profiles_keep_meters_separate():
     assert meter_1_hour_12["mean_kwh"] == 20.0
 
     assert meter_2_hour_12["mean_kwh"] == 40.0
+
+
+def test_portfolio_profiles_sum_companies_before_calculating_metrics():
+    friday_1 = _hourly_day(
+        "2025-07-04",
+        peak_value=10.0,
+        off_peak_value=10.0,
+    )
+    saturday_1 = _hourly_day(
+        "2025-07-05",
+        peak_value=10.0,
+        off_peak_value=10.0,
+    )
+    company_1 = pd.concat([friday_1, saturday_1], ignore_index=True)
+    company_1["company_code"] = "Kompania 1"
+
+    friday_2 = _hourly_day(
+        "2025-07-04",
+        peak_value=20.0,
+        off_peak_value=20.0,
+    )
+    saturday_2 = _hourly_day(
+        "2025-07-05",
+        peak_value=20.0,
+        off_peak_value=20.0,
+    )
+    company_2 = pd.concat([friday_2, saturday_2], ignore_index=True)
+    company_2["company_code"] = "Kompania 2"
+
+    company_hourly = pd.concat([company_1, company_2], ignore_index=True)
+
+    portfolio_profile, portfolio_monthly, portfolio_hourly = (
+        _calculate_portfolio_profiles(company_hourly)
+    )
+
+    profile = portfolio_profile.iloc[0]
+
+    assert profile["observation_count"] == 48
+    assert profile["total_kwh"] == 48 * 30.0
+    assert profile["mean_kwh"] == 30.0
+    assert len(portfolio_monthly) == 1
+
+    assert set(portfolio_hourly["profile_type"].unique()) == {
+        "all_days",
+        "weekday",
+        "weekend",
+    }
+    assert len(portfolio_hourly) == 72
+
+    all_days = portfolio_hourly[portfolio_hourly["profile_type"] == "all_days"]
+    assert (all_days["mean_kwh"] == 30.0).all()

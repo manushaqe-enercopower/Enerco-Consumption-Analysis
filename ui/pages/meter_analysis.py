@@ -29,6 +29,12 @@ PROFILE_DIR = ROOT / "data" / "processed" / "profile_metrics"
 METER_PROFILES_PATH = PROFILE_DIR / "meter_profiles.parquet"
 METER_MONTHLY_PATH = PROFILE_DIR / "meter_monthly.parquet"
 METER_HOURLY_PATH = PROFILE_DIR / "meter_hourly_profile.parquet"
+PORTFOLIO_PROFILE_PATH = PROFILE_DIR / "portfolio_profile.parquet"
+PORTFOLIO_MONTHLY_PATH = PROFILE_DIR / "portfolio_monthly.parquet"
+PORTFOLIO_HOURLY_PATH = PROFILE_DIR / "portfolio_hourly_profile.parquet"
+
+ALL_COMPANIES = "Të gjitha kompanitë"
+ALL_METERS = "Të gjithë njehsorët"
 
 
 SEASONALITY_LABELS = {
@@ -41,12 +47,14 @@ SIMILARITY_LABELS = {
     "similar": "I ngjashëm me njehsorët tjerë",
     "different": "Profil i ndryshëm",
     "single_meter": "Kompani me një njehsor",
+    "aggregate": "Pamje e kombinuar",
 }
 
 SIMILARITY_SHORT_LABELS = {
     "similar": "I ngjashëm",
     "different": "I ndryshëm",
     "single_meter": "Njehsor i vetëm",
+    "aggregate": "Pamje e kombinuar",
 }
 
 
@@ -528,6 +536,9 @@ required_paths = [
     METER_PROFILES_PATH,
     METER_MONTHLY_PATH,
     METER_HOURLY_PATH,
+    PORTFOLIO_PROFILE_PATH,
+    PORTFOLIO_MONTHLY_PATH,
+    PORTFOLIO_HOURLY_PATH,
 ]
 
 missing_paths = [path for path in required_paths if not path.exists()]
@@ -542,6 +553,9 @@ if missing_paths:
 profiles = read_parquet(str(METER_PROFILES_PATH))
 monthly = read_parquet(str(METER_MONTHLY_PATH))
 hourly = read_parquet(str(METER_HOURLY_PATH))
+portfolio_profile = read_parquet(str(PORTFOLIO_PROFILE_PATH))
+portfolio_monthly = read_parquet(str(PORTFOLIO_MONTHLY_PATH))
+portfolio_hourly = read_parquet(str(PORTFOLIO_HOURLY_PATH))
 
 for df in (profiles, monthly, hourly):
     df["company_code"] = df["company_code"].astype(str)
@@ -572,48 +586,79 @@ selector_cols = st.columns([2, 3, 4])
 with selector_cols[0]:
     selected_company = st.selectbox(
         "Zgjidh kompaninë",
-        companies,
+        [ALL_COMPANIES, *companies],
         key="meter-analysis-company-selector",
     )
 
-company_profiles = profiles[profiles["company_code"] == selected_company].copy()
+all_companies_mode = selected_company == ALL_COMPANIES
 
-company_profiles = company_profiles.sort_values(
-    ["meter_id", "source_sheet", "source_column"]
-).reset_index(drop=True)
+if all_companies_mode:
+    company_profiles = profiles.copy().reset_index(drop=True)
 
-company_profiles["meter_display"] = company_profiles.apply(
-    meter_display_name,
-    axis=1,
-)
+    with selector_cols[1]:
+        selected_meter_display = st.selectbox(
+            "Zgjidh njehsorin",
+            [ALL_METERS],
+            key="meter-analysis-meter-selector",
+            disabled=True,
+        )
 
-with selector_cols[1]:
-    selected_meter_display = st.selectbox(
-        "Zgjidh njehsorin",
-        company_profiles["meter_display"].tolist(),
-        key="meter-analysis-meter-selector",
+    selected = portfolio_profile.iloc[0].copy()
+    selected["company_code"] = ALL_COMPANIES
+    selected["meter_id"] = ALL_METERS
+    selected["source_sheet"] = "Të shumëfishta"
+    selected["source_column"] = "Të shumëfishta"
+    selected["profile_similarity"] = "aggregate"
+
+    selected_monthly = portfolio_monthly.copy()
+    selected_hourly = portfolio_hourly[
+        portfolio_hourly["profile_type"] == "all_days"
+    ].copy()
+    company_hourly = hourly.copy()
+
+    with selector_cols[2]:
+        st.caption(
+            f"Pamja e kombinuar përfshin {profiles['company_code'].nunique()} "
+            f"kompani dhe {len(profiles)} njehsorë të përdorshëm."
+        )
+else:
+    company_profiles = profiles[profiles["company_code"] == selected_company].copy()
+
+    company_profiles = company_profiles.sort_values(
+        ["meter_id", "source_sheet", "source_column"]
+    ).reset_index(drop=True)
+
+    company_profiles["meter_display"] = company_profiles.apply(
+        meter_display_name,
+        axis=1,
     )
 
-selected = company_profiles[
-    company_profiles["meter_display"] == selected_meter_display
-].iloc[0]
+    with selector_cols[1]:
+        selected_meter_display = st.selectbox(
+            "Zgjidh njehsorin",
+            company_profiles["meter_display"].tolist(),
+            key="meter-analysis-meter-selector",
+        )
 
-with selector_cols[2]:
-    st.caption(
-        "Analiza përfshin vetëm njehsorët e konsumit që kalojnë filtrin "
-        "e cilësisë. Krahasimi i ngjashmërisë bëhet brenda "
-        "së njëjtës kompani."
-    )
+    selected = company_profiles[
+        company_profiles["meter_display"] == selected_meter_display
+    ].iloc[0]
 
-selected_monthly = monthly[
-    (monthly["company_code"] == selected["company_code"])
-    & (monthly["meter_id"] == selected["meter_id"])
-    & (monthly["source_sheet"] == selected["source_sheet"])
-].copy()
+    with selector_cols[2]:
+        st.caption(
+            "Analiza përfshin vetëm njehsorët e konsumit që kalojnë filtrin "
+            "e cilësisë. Krahasimi i ngjashmërisë bëhet brenda "
+            "së njëjtës kompani."
+        )
 
-selected_hourly = hourly[selected_meter_mask(hourly, selected)].copy()
+    selected_monthly = monthly[
+        (monthly["company_code"] == selected["company_code"])
+        & (monthly["meter_id"] == selected["meter_id"])
+        & (monthly["source_sheet"] == selected["source_sheet"])
+    ].copy()
 
-company_hourly = hourly[hourly["company_code"] == selected_company].copy()
+    selected_hourly = hourly[selected_meter_mask(hourly, selected)].copy()
+    company_hourly = hourly[hourly["company_code"] == selected_company].copy()
 
 
 (
@@ -649,9 +694,17 @@ with overview_tab:
             "profilit të përgjithshëm të kompanisë."
         ),
         finding=(
-            f"Njehsori klasifikohet si "
-            f"'{similarity_label(selected['profile_similarity'])}' dhe ka "
-            f"sezonalitet '{seasonality_label(selected['seasonality'])}'."
+            (
+                f"Pamja e kombinuar përfshin {len(company_profiles)} njehsorë në "
+                f"{company_profiles['company_code'].nunique()} kompani dhe ka "
+                f"sezonalitet '{seasonality_label(selected['seasonality'])}'."
+            )
+            if all_companies_mode
+            else (
+                f"Njehsori klasifikohet si "
+                f"'{similarity_label(selected['profile_similarity'])}' dhe ka "
+                f"sezonalitet '{seasonality_label(selected['seasonality'])}'."
+            )
         ),
     )
 
@@ -703,13 +756,26 @@ with overview_tab:
         value_card("Kompania", selected_company)
 
     with metadata_cols[1]:
-        value_card("Njehsori", str(selected["meter_id"]))
+        value_card(
+            "Njehsori",
+            (
+                f"{len(company_profiles)} njehsorë"
+                if all_companies_mode
+                else str(selected["meter_id"])
+            ),
+        )
 
     with metadata_cols[2]:
-        value_card("Sheet-i burimor", str(selected["source_sheet"]))
+        value_card(
+            "Sheet-i burimor",
+            "Të shumëfishta" if all_companies_mode else str(selected["source_sheet"]),
+        )
 
     with metadata_cols[3]:
-        value_card("Kolona burimore", str(selected["source_column"]))
+        value_card(
+            "Kolona burimore",
+            "Të shumëfishta" if all_companies_mode else str(selected["source_column"]),
+        )
 
     st.caption(
         "Identifikuesit teknikë ruhen për gjurmueshmëri nga output-i analitik "
@@ -754,37 +820,59 @@ with hourly_tab:
 with comparison_tab:
     meter_count = len(company_profiles)
 
-    analysis_description(
-        title="Krahasimi i njehsorëve brenda kompanisë",
-        description=(
-            "Të gjithë njehsorët e përdorshëm të kompanisë paraqiten së bashku "
-            "për të krahasuar formën e tyre 24-orëshe. Njehsori i zgjedhur "
-            "theksohet me vijë më të fortë."
-        ),
-        purpose=(
-            "Të identifikohen njehsorët që ndjekin një sjellje të përbashkët "
-            "dhe ata që devijojnë nga profili i kompanisë."
-        ),
-        finding=(
-            f"{selected_company} ka {meter_count} njehsorë të përdorshëm në "
-            "këtë analizë."
-        ),
-    )
-
-    render_plot(
-        company_meter_hourly_figure(
-            company_hourly,
-            company_profiles,
-            selected,
-        ),
-        "meter-analysis-company-hourly-comparison",
-    )
-
-    if meter_count == 1:
-        st.info(
-            "Kjo kompani ka vetëm një njehsor të përdorshëm, prandaj nuk ka "
-            "bazë për krahasim të brendshëm të profileve."
+    if all_companies_mode:
+        analysis_description(
+            title="Profili i kombinuar i të gjithë njehsorëve",
+            description=(
+                "Në pamjen e të gjitha kompanive, njehsorët agregohen në një "
+                "profil të vetëm 24-orësh të portofolit."
+            ),
+            purpose=(
+                "Të shihet forma e përgjithshme e konsumit pa mbivendosur "
+                "qindra profile individuale në të njëjtin grafik."
+            ),
+            finding=(
+                f"Profili përfshin {meter_count} njehsorë nga "
+                f"{company_profiles['company_code'].nunique()} kompani."
+            ),
         )
+
+        render_plot(
+            hourly_profile_figure(selected_hourly),
+            "meter-analysis-company-hourly-comparison-all",
+        )
+    else:
+        analysis_description(
+            title="Krahasimi i njehsorëve brenda kompanisë",
+            description=(
+                "Të gjithë njehsorët e përdorshëm të kompanisë paraqiten së bashku "
+                "për të krahasuar formën e tyre 24-orëshe. Njehsori i zgjedhur "
+                "theksohet me vijë më të fortë."
+            ),
+            purpose=(
+                "Të identifikohen njehsorët që ndjekin një sjellje të përbashkët "
+                "dhe ata që devijojnë nga profili i kompanisë."
+            ),
+            finding=(
+                f"{selected_company} ka {meter_count} njehsorë të përdorshëm në "
+                "këtë analizë."
+            ),
+        )
+
+        render_plot(
+            company_meter_hourly_figure(
+                company_hourly,
+                company_profiles,
+                selected,
+            ),
+            "meter-analysis-company-hourly-comparison",
+        )
+
+        if meter_count == 1:
+            st.info(
+                "Kjo kompani ka vetëm një njehsor të përdorshëm, prandaj nuk ka "
+                "bazë për krahasim të brendshëm të profileve."
+            )
 
 
 with metrics_tab:
@@ -800,8 +888,15 @@ with metrics_tab:
             "me njehsorët tjerë të kompanisë apo zë një pozicion të veçantë."
         ),
         finding=(
-            f"Statusi i ngjashmërisë për njehsorin e zgjedhur është "
-            f"'{similarity_label(selected['profile_similarity'])}'."
+            (
+                f"Po shfaqen {len(company_profiles)} njehsorë nga të gjitha "
+                f"{company_profiles['company_code'].nunique()} kompanitë."
+            )
+            if all_companies_mode
+            else (
+                f"Statusi i ngjashmërisë për njehsorin e zgjedhur është "
+                f"'{similarity_label(selected['profile_similarity'])}'."
+            )
         ),
     )
 
@@ -903,9 +998,17 @@ with similarity_tab:
             "ose sjellje të ndryshme operative brenda të njëjtës kompani."
         ),
         finding=(
-            f"Në {selected_company}: {similar_count} njehsorë janë klasifikuar "
-            f"si të ngjashëm, {different_count} si të ndryshëm dhe "
-            f"{single_count} si njehsor i vetëm."
+            (
+                f"Në të gjitha kompanitë: {similar_count} njehsorë janë "
+                f"klasifikuar si të ngjashëm, {different_count} si të ndryshëm "
+                f"dhe {single_count} si njehsor i vetëm."
+            )
+            if all_companies_mode
+            else (
+                f"Në {selected_company}: {similar_count} njehsorë janë klasifikuar "
+                f"si të ngjashëm, {different_count} si të ndryshëm dhe "
+                f"{single_count} si njehsor i vetëm."
+            )
         ),
     )
 
@@ -934,6 +1037,7 @@ with similarity_tab:
 
         different_display = different_meters[
             [
+                "company_code",
                 "meter_id",
                 "source_sheet",
                 "source_column",
@@ -955,6 +1059,7 @@ with similarity_tab:
 
         different_display = different_display.rename(
             columns={
+                "company_code": "Kompania",
                 "meter_id": "Njehsori",
                 "source_sheet": "Sheet-i",
                 "source_column": "Kolona burimore",

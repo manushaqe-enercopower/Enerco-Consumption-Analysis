@@ -13,6 +13,8 @@ WINTER_MONTHS = {12, 1, 2}
 
 SEASONALITY_THRESHOLD = 1.10
 
+PORTFOLIO_CODE = "Portfolio"
+
 
 def _safe_ratio(
     numerator: float,
@@ -624,6 +626,50 @@ def _calculate_company_hourly_profiles(
     )
 
 
+def _calculate_portfolio_profiles(
+    company_hourly: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    portfolio_hourly = (
+        company_hourly.groupby(
+            [
+                "date",
+                "hour",
+                "timestamp",
+            ],
+            as_index=False,
+        )["energy_kwh"]
+        .sum(min_count=1)
+        .sort_values("timestamp")
+        .reset_index(drop=True)
+    )
+
+    portfolio_hourly["company_code"] = PORTFOLIO_CODE
+
+    portfolio_profile = pd.DataFrame(
+        [
+            {
+                "company_code": PORTFOLIO_CODE,
+                **calculate_profile_metrics(portfolio_hourly),
+            }
+        ]
+    )
+
+    prepared_portfolio = _prepare_hourly_data(portfolio_hourly).dropna(
+        subset=["energy_kwh"]
+    )
+
+    portfolio_monthly = _monthly_means(prepared_portfolio)
+    portfolio_monthly.insert(0, "company_code", PORTFOLIO_CODE)
+
+    portfolio_hourly_profile = _calculate_company_hourly_profiles(portfolio_hourly)
+
+    return (
+        portfolio_profile,
+        portfolio_monthly,
+        portfolio_hourly_profile,
+    )
+
+
 def _calculate_meter_hourly_profiles(
     data: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -935,6 +981,12 @@ def run_profile_analysis(
 
     company_hourly_profile_df = _calculate_company_hourly_profiles(company_hourly)
 
+    (
+        portfolio_profile_df,
+        portfolio_monthly_df,
+        portfolio_hourly_profile_df,
+    ) = _calculate_portfolio_profiles(company_hourly)
+
     meter_profiles_df = _add_meter_similarity_flags(meter_profiles_df)
 
     meter_counts = (
@@ -956,6 +1008,12 @@ def run_profile_analysis(
     company_profiles_df["voltage_level"] = pd.NA
 
     company_profiles_df["metadata_status"] = "pending_mapping"
+
+    portfolio_profile_df["meter_count_used"] = len(meter_profiles_df)
+    portfolio_profile_df["business_sector"] = pd.NA
+    portfolio_profile_df["company_size"] = pd.NA
+    portfolio_profile_df["voltage_level"] = pd.NA
+    portfolio_profile_df["metadata_status"] = "portfolio"
 
     output_dir.mkdir(
         parents=True,
@@ -994,6 +1052,21 @@ def run_profile_analysis(
 
     meter_hourly_profile_df.to_parquet(
         output_dir / "meter_hourly_profile.parquet",
+        index=False,
+    )
+
+    portfolio_profile_df.to_parquet(
+        output_dir / "portfolio_profile.parquet",
+        index=False,
+    )
+
+    portfolio_monthly_df.to_parquet(
+        output_dir / "portfolio_monthly.parquet",
+        index=False,
+    )
+
+    portfolio_hourly_profile_df.to_parquet(
+        output_dir / "portfolio_hourly_profile.parquet",
         index=False,
     )
 
@@ -1036,6 +1109,24 @@ def run_profile_analysis(
             index=False,
         )
 
+        portfolio_profile_df.to_excel(
+            writer,
+            sheet_name="Portfolio Profile",
+            index=False,
+        )
+
+        portfolio_monthly_df.to_excel(
+            writer,
+            sheet_name="Portfolio Monthly",
+            index=False,
+        )
+
+        portfolio_hourly_profile_df.to_excel(
+            writer,
+            sheet_name="Portfolio Hourly",
+            index=False,
+        )
+
     print()
     print("=" * 60)
     print("CONSUMPTION PROFILE METRICS")
@@ -1044,6 +1135,10 @@ def run_profile_analysis(
     print(f"Companies analyzed: " f"{len(company_profiles_df)}")
 
     print(f"Consumption meters analyzed: " f"{len(meter_profiles_df)}")
+    print(
+        f"Portfolio companies combined: "
+        f"{company_profiles_df['company_code'].nunique()}"
+    )
 
     print()
     print("Seasonality:")
@@ -1059,6 +1154,9 @@ def run_profile_analysis(
         "meter_monthly": (meter_monthly_df),
         "company_hourly_profile": (company_hourly_profile_df),
         "meter_hourly_profile": (meter_hourly_profile_df),
+        "portfolio_profile": (portfolio_profile_df),
+        "portfolio_monthly": (portfolio_monthly_df),
+        "portfolio_hourly_profile": (portfolio_hourly_profile_df),
     }
 
 

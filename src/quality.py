@@ -288,10 +288,10 @@ def analyze_meter(
 
     # ---------------------------------------------------------
     # Methodology reliability rule:
-    # >10% missing within the annual profile window
-    # means unusable for annual profile analysis.
+    # Quality is evaluated within the meter's active span.
+    # More than 10% internal missing data makes the series unusable.
+    # Leading/trailing gaps are represented by coverage_status.
     # ---------------------------------------------------------
-    #if profile_observed_hours == 0 or profile_missing_percent > 10:
     if active_span_hours == 0 or internal_missing_percent > 10:
         quality_status = "unusable"
 

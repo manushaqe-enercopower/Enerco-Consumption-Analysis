@@ -15,6 +15,8 @@ COMPANY_HOURLY_PATH = OUTLIERS_DIR / "company_hourly.parquet"
 OUTLIERS_PATH = OUTLIERS_DIR / "company_hourly_outliers.parquet"
 SUMMARY_PATH = OUTLIERS_DIR / "company_outlier_summary.parquet"
 
+ALL_COMPANIES = "Të gjitha kompanitë"
+
 
 @st.cache_data(show_spinner=False)
 def read_parquet(path: str) -> pd.DataFrame:
@@ -166,29 +168,81 @@ with company_tab:
 
     selected_company = st.selectbox(
         "Zgjidh kompaninë",
-        companies,
+        [ALL_COMPANIES, *companies],
         key="outlier-company-selector",
     )
 
-    selected_summary = company_summary[
-        company_summary["company_code"].astype(str) == selected_company
-    ].iloc[0]
+    all_companies_mode = selected_company == ALL_COMPANIES
 
-    selected_hourly = company_hourly[
-        company_hourly["company_code"].astype(str) == selected_company
-    ].copy()
+    if all_companies_mode:
+        total_hours = int(company_summary["total_hours"].sum())
+        outlier_hours = int(company_summary["outlier_hours"].sum())
+        max_abs_z = (
+            float(company_summary["max_abs_z_score"].max())
+            if company_summary["max_abs_z_score"].notna().any()
+            else 0.0
+        )
 
-    selected_outliers = outliers[
-        outliers["company_code"].astype(str) == selected_company
-    ].copy()
+        selected_summary = pd.Series(
+            {
+                "total_hours": total_hours,
+                "outlier_hours": outlier_hours,
+                "outlier_percent": (
+                    outlier_hours / total_hours * 100 if total_hours else 0.0
+                ),
+                "max_abs_z_score": max_abs_z,
+            }
+        )
 
-    selected_hourly["timestamp"] = pd.to_datetime(selected_hourly["timestamp"])
+        selected_hourly = (
+            company_hourly.assign(timestamp=pd.to_datetime(company_hourly["timestamp"]))
+            .groupby("timestamp", as_index=False)["energy_kwh"]
+            .sum(min_count=1)
+            .sort_values("timestamp")
+        )
 
-    selected_outliers["timestamp"] = pd.to_datetime(selected_outliers["timestamp"])
+        selected_outliers = outliers.copy()
+        selected_outliers["timestamp"] = pd.to_datetime(selected_outliers["timestamp"])
+
+        outlier_timestamps = (
+            selected_outliers.groupby("timestamp", as_index=False)
+            .agg(
+                companies_with_outlier=("company_code", "nunique"),
+                max_abs_z_score=("absolute_z_score", "max"),
+                outlier_observations=("company_code", "size"),
+            )
+            .merge(
+                selected_hourly,
+                on="timestamp",
+                how="left",
+            )
+        )
+    else:
+        selected_summary = company_summary[
+            company_summary["company_code"].astype(str) == selected_company
+        ].iloc[0]
+
+        selected_hourly = company_hourly[
+            company_hourly["company_code"].astype(str) == selected_company
+        ].copy()
+
+        selected_outliers = outliers[
+            outliers["company_code"].astype(str) == selected_company
+        ].copy()
+
+        selected_hourly["timestamp"] = pd.to_datetime(selected_hourly["timestamp"])
+        selected_outliers["timestamp"] = pd.to_datetime(selected_outliers["timestamp"])
 
     st.markdown(
-        "Kjo analizë paraqet konsumin orar të kompanisë së zgjedhur "
-        "dhe momentet që janë identifikuar si outlier."
+        (
+            "Kjo analizë paraqet konsumin orar të kombinuar të të gjitha "
+            "kompanive dhe momentet kur të paktën një kompani ka outlier."
+        )
+        if all_companies_mode
+        else (
+            "Kjo analizë paraqet konsumin orar të kompanisë së zgjedhur "
+            "dhe momentet që janë identifikuar si outlier."
+        )
     )
 
     st.caption(
@@ -196,15 +250,21 @@ with company_tab:
         "të izoluara apo përsëriten në periudha të caktuara."
     )
 
+    if all_companies_mode:
+        st.info(
+            f"Po shfaqet pamja e kombinuar për të gjitha "
+            f"{company_summary['company_code'].nunique()} kompanitë."
+        )
+
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric(
-        "Orë të analizuara",
+        "Orë të analizuara" if not all_companies_mode else "Vëzhgime kompani-orë",
         f"{int(selected_summary['total_hours']):,}",
     )
 
     col2.metric(
-        "Orë outlier",
+        "Orë outlier" if not all_companies_mode else "Vëzhgime outlier",
         f"{int(selected_summary['outlier_hours']):,}",
     )
 
@@ -227,13 +287,41 @@ with company_tab:
     )
 
     fig.update_traces(
-        name="Konsumi orar",
+        name=(
+            "Konsumi i kombinuar i portofolit" if all_companies_mode else "Konsumi orar"
+        ),
         hovertemplate=(
             "%{x|%d.%m.%Y %H:%M}<br>" "Konsumi: %{y:,.2f} kWh" "<extra></extra>"
         ),
     )
 
-    if not selected_outliers.empty:
+    if all_companies_mode and not outlier_timestamps.empty:
+        fig.add_scatter(
+            x=outlier_timestamps["timestamp"],
+            y=outlier_timestamps["energy_kwh"],
+            mode="markers",
+            name="Ka outlier në kompani",
+            marker={
+                "size": 8,
+                "symbol": "circle-open",
+            },
+            customdata=outlier_timestamps[
+                [
+                    "companies_with_outlier",
+                    "outlier_observations",
+                    "max_abs_z_score",
+                ]
+            ],
+            hovertemplate=(
+                "%{x|%d.%m.%Y %H:%M}<br>"
+                "Konsumi i portofolit: %{y:,.2f} kWh<br>"
+                "Kompanitë me outlier: %{customdata[0]}<br>"
+                "Vëzhgime outlier: %{customdata[1]}<br>"
+                "Maks. |Z|: %{customdata[2]:.2f}"
+                "<extra></extra>"
+            ),
+        )
+    elif not all_companies_mode and not selected_outliers.empty:
         fig.add_scatter(
             x=selected_outliers["timestamp"],
             y=selected_outliers["energy_kwh"],
@@ -259,7 +347,12 @@ with company_tab:
         )
 
     fig.update_layout(
-        title=f"Konsumi orar dhe outlier-at — {selected_company}",
+        title=(
+            f"Konsumi i kombinuar dhe outlier-at — "
+            f"{company_summary['company_code'].nunique()} kompani"
+            if all_companies_mode
+            else f"Konsumi orar dhe outlier-at — {selected_company}"
+        ),
         xaxis_title="Koha",
         yaxis_title="Konsumi (kWh)",
         height=550,
@@ -272,8 +365,11 @@ with company_tab:
     )
 
     if selected_outliers.empty:
-        st.info(
-            "Për këtë kompani nuk janë identifikuar outlier-a " "me pragun |Z| > 3."
+        st.info("Nuk janë identifikuar outlier-a me pragun |Z| > 3.")
+    elif all_companies_mode:
+        st.caption(
+            "Pikat tregojnë orët ku të paktën një kompani ka kaluar pragun "
+            "|Z| > 3; vija paraqet konsumin e kombinuar të portofolit."
         )
     else:
         st.caption(
@@ -552,7 +648,7 @@ with table_tab:
     selected_companies = filter_col1.multiselect(
         "Filtro sipas kompanisë",
         options=companies,
-        default=[],
+        default=companies,
         key="outlier-table-company-filter",
     )
 

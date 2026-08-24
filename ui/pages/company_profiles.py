@@ -34,6 +34,11 @@ COMPANY_PROFILES_PATH = PROFILE_DIR / "company_profiles.parquet"
 COMPANY_MONTHLY_PATH = PROFILE_DIR / "company_monthly.parquet"
 
 COMPANY_HOURLY_PATH = PROFILE_DIR / "company_hourly_profile.parquet"
+PORTFOLIO_PROFILE_PATH = PROFILE_DIR / "portfolio_profile.parquet"
+PORTFOLIO_MONTHLY_PATH = PROFILE_DIR / "portfolio_monthly.parquet"
+PORTFOLIO_HOURLY_PATH = PROFILE_DIR / "portfolio_hourly_profile.parquet"
+
+ALL_COMPANIES = "Të gjitha kompanitë"
 
 
 SEASONALITY_LABELS = {
@@ -665,11 +670,14 @@ def portfolio_metric_scatter(
         data["seasonality"].map(SEASONALITY_LABELS).fillna(data["seasonality"])
     )
 
-    data["selected"] = np.where(
-        data["company_code"] == selected_company,
-        "Kompania e zgjedhur",
-        "Kompanitë tjera",
-    )
+    if selected_company == ALL_COMPANIES:
+        data["selected"] = "Të gjitha kompanitë"
+    else:
+        data["selected"] = np.where(
+            data["company_code"] == selected_company,
+            "Kompania e zgjedhur",
+            "Kompanitë tjera",
+        )
 
     fig = px.scatter(
         data,
@@ -714,6 +722,9 @@ required_paths = [
     COMPANY_PROFILES_PATH,
     COMPANY_MONTHLY_PATH,
     COMPANY_HOURLY_PATH,
+    PORTFOLIO_PROFILE_PATH,
+    PORTFOLIO_MONTHLY_PATH,
+    PORTFOLIO_HOURLY_PATH,
 ]
 
 missing_paths = [path for path in required_paths if not path.exists()]
@@ -733,6 +744,9 @@ profiles = read_parquet(str(COMPANY_PROFILES_PATH))
 monthly = read_parquet(str(COMPANY_MONTHLY_PATH))
 
 hourly = read_parquet(str(COMPANY_HOURLY_PATH))
+portfolio_profile = read_parquet(str(PORTFOLIO_PROFILE_PATH))
+portfolio_monthly = read_parquet(str(PORTFOLIO_MONTHLY_PATH))
+portfolio_hourly = read_parquet(str(PORTFOLIO_HOURLY_PATH))
 
 
 profiles["company_code"] = profiles["company_code"].astype(str)
@@ -751,8 +765,7 @@ companies = sorted(
 st.title("Profilet e konsumit të kompanive")
 
 st.caption(
-    "Karakterizimi i profilit vjetor të konsumit "
-    "për Korrik 2025 – Qershor 2026"
+    "Karakterizimi i profilit vjetor të konsumit " "për Korrik 2025 – Qershor 2026"
 )
 
 
@@ -766,7 +779,7 @@ selector_left, selector_right = st.columns(
 with selector_left:
     selected_company = st.selectbox(
         "Zgjidh kompaninë",
-        companies,
+        [ALL_COMPANIES, *companies],
         key="company-profile-selector",
     )
 
@@ -777,11 +790,19 @@ with selector_right:
     )
 
 
-selected = profiles[profiles["company_code"] == selected_company].iloc[0]
+is_portfolio = selected_company == ALL_COMPANIES
 
-selected_monthly = monthly[monthly["company_code"] == selected_company].copy()
-
-selected_hourly = hourly[hourly["company_code"] == selected_company].copy()
+if is_portfolio:
+    selected = portfolio_profile.iloc[0]
+    selected_monthly = portfolio_monthly.copy()
+    selected_hourly = portfolio_hourly.copy()
+    selected_label = f"Portofoli ({len(profiles)} kompani)"
+    st.info(f"Po shfaqet analiza e kombinuar për të gjitha {len(profiles)} kompanitë.")
+else:
+    selected = profiles[profiles["company_code"] == selected_company].iloc[0]
+    selected_monthly = monthly[monthly["company_code"] == selected_company].copy()
+    selected_hourly = hourly[hourly["company_code"] == selected_company].copy()
+    selected_label = selected_company
 
 
 (
@@ -819,7 +840,7 @@ with overview_tab:
             "klasterizim."
         ),
         finding=(
-            f"{selected_company} klasifikohet me sezonalitet "
+            f"{selected_label} klasifikohet me sezonalitet "
             f"'{seasonality_label(selected['seasonality'])}', "
             f"përdor {int(selected['meter_count_used'])} njehsorë "
             "konsumi dhe ka "
@@ -898,7 +919,7 @@ with overview_tab:
     with metadata_cols[0]:
         value_card(
             "Kodi",
-            selected_company,
+            selected_label,
         )
 
     with metadata_cols[1]:
@@ -1226,44 +1247,105 @@ with trend_tab:
 
 
 with comparison_tab:
-    analysis_description(
-        title="Krahasimi me portofolin",
-        description=(
-            "Secila metrikë vendoset në percentilin e saj "
-            f"kundrejt {len(profiles)} kompanive që kaluan "
-            "kontrollin e cilësisë."
-        ),
-        purpose=(
-            "Të kuptohet se cilat karakteristika të kompanisë "
-            "janë tipike dhe cilat janë relativisht ekstreme "
-            "në portofol."
-        ),
-        finding=(
-            cv_finding(
-                selected,
-                profiles,
-            )
-            + " "
-            + load_factor_finding(
-                selected,
-                profiles,
-            )
-        ),
-    )
+    if is_portfolio:
+        analysis_description(
+            title="Pamja e plotë e portofolit",
+            description=(
+                "Kur zgjidhen të gjitha kompanitë, kjo pamje paraqet "
+                "shpërndarjen e plotë të profileve individuale në portofol."
+            ),
+            purpose=(
+                "Të shihet si shpërndahen të gjitha kompanitë pa e trajtuar "
+                "portofolin e kombinuar si një kompani individuale."
+            ),
+            finding=(f"Në këtë pamje janë përfshirë {len(profiles)} kompani."),
+        )
 
-    render_plot(
-        metric_percentile_figure(
-            profiles,
-            selected,
-        ),
-        "company-profile-percentiles",
-    )
+        render_plot(
+            portfolio_metric_scatter(
+                profiles,
+                ALL_COMPANIES,
+            ),
+            "company-profile-all-companies-scatter",
+        )
 
-    st.caption(
-        "Percentili paraqet pozicionin relativ të kompanisë "
-        "në portofol. Percentil më i lartë nuk do të thotë "
-        "automatikisht performancë më e mirë ose më e keqe."
-    )
+        portfolio_summary = pd.DataFrame(
+            {
+                "Metrika": [
+                    "Peak / Off-Peak",
+                    "Ditë Pune / Fundjavë",
+                    "CV",
+                    "Load Factor",
+                    "Indeksi sezonal",
+                    "Trendi (%)",
+                ],
+                "Portofoli i kombinuar": [
+                    selected["peak_ratio"],
+                    selected["weekday_weekend_ratio"],
+                    selected["cv"],
+                    selected["load_factor"],
+                    selected["seasonality_index"],
+                    selected["trend_percent"],
+                ],
+                "Mediana e kompanive": [
+                    profiles["peak_ratio"].median(),
+                    profiles["weekday_weekend_ratio"].median(),
+                    profiles["cv"].median(),
+                    profiles["load_factor"].median(),
+                    profiles["seasonality_index"].median(),
+                    profiles["trend_percent"].median(),
+                ],
+            }
+        )
+
+        st.dataframe(
+            portfolio_summary,
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Portofoli i kombinuar": st.column_config.NumberColumn(format="%.3f"),
+                "Mediana e kompanive": st.column_config.NumberColumn(format="%.3f"),
+            },
+        )
+    else:
+        analysis_description(
+            title="Krahasimi me portofolin",
+            description=(
+                "Secila metrikë vendoset në percentilin e saj "
+                f"kundrejt {len(profiles)} kompanive që kaluan "
+                "kontrollin e cilësisë."
+            ),
+            purpose=(
+                "Të kuptohet se cilat karakteristika të kompanisë "
+                "janë tipike dhe cilat janë relativisht ekstreme "
+                "në portofol."
+            ),
+            finding=(
+                cv_finding(
+                    selected,
+                    profiles,
+                )
+                + " "
+                + load_factor_finding(
+                    selected,
+                    profiles,
+                )
+            ),
+        )
+
+        render_plot(
+            metric_percentile_figure(
+                profiles,
+                selected,
+            ),
+            "company-profile-percentiles",
+        )
+
+        st.caption(
+            "Percentili paraqet pozicionin relativ të kompanisë "
+            "në portofol. Percentil më i lartë nuk do të thotë "
+            "automatikisht performancë më e mirë ose më e keqe."
+        )
 
 
 with table_tab:
