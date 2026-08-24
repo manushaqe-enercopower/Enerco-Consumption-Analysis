@@ -291,7 +291,8 @@ def analyze_meter(
     # >10% missing within the annual profile window
     # means unusable for annual profile analysis.
     # ---------------------------------------------------------
-    if profile_observed_hours == 0 or profile_missing_percent > 10:
+    #if profile_observed_hours == 0 or profile_missing_percent > 10:
+    if active_span_hours == 0 or internal_missing_percent > 10:
         quality_status = "unusable"
 
     elif negative_count > 0 or zero_run_count > 0 or extreme_value_count > 0:
