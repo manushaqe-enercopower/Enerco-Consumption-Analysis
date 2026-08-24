@@ -1,11 +1,7 @@
-# EnerCo Consumption Analysis
-
+**# EnerCo Consumption Analysis**
 > Python-based electricity-consumption analytics pipeline and Streamlit dashboard for anonymized EnerCo hourly meter data.
-
 The project transforms the supplied Excel workbook into validated analytical datasets, reports, figures, and an internal dashboard covering data quality, consumption profiles, outliers, external factors, clustering, and prosumer behavior.
-
-## Quick Start
-
+**## Quick Start**
 | Task | Command / Location |
 |---|---|
 | Install dependencies | `pip install -r requirements.txt` |
@@ -13,11 +9,8 @@ The project transforms the supplied Excel workbook into validated analytical dat
 | Run full pipeline | `python -m src.pipeline` |
 | Start dashboard | `streamlit run ui/app.py` |
 | Run tests | `python -m pytest -q` |
-
 > The source workbook is not included in the repository and must be added manually before running the pipeline.
-
-## 1. Project Overview
-
+**## 1. Project Overview**
 The project covers:
 - data-quality validation
 - wide-to-long transformation
@@ -32,11 +25,11 @@ The project covers:
 - tariff-period analysis
 - K-Means clustering
 - prosumer A+ / A- analysis
+- combined portfolio views across all analyzed companies
+- Excel export of company lists by clustering group
 - interactive Streamlit visualization.
 The analytical pipeline is implemented in Python and the dashboard is implemented with Streamlit.
-
-## 2. Analysis Period
-
+**## 2. Analysis Period**
 Source data:
 ```text
 June 2025 – June 2026
@@ -51,9 +44,7 @@ Main energy unit:
 kWh
 ```
 The dashboard may use MWh or GWh for larger totals.
-
-## 3. Technologies
-
+**## 3. Technologies**
 Main dependencies:
 - Python 3
 - pandas
@@ -66,85 +57,77 @@ Main dependencies:
 - Streamlit
 - pytest
 Exact package versions are defined in `requirements.txt`.
-
-## 4. Project Structure
-
+**## 4. Project Structure**
 ```text
 Enerco-Consumption-Analysis/
 ├── data/
-│   ├── raw/
-│   │   └── <source-meter-file>.xlsx
-│   ├── processed/
-│   │   ├── hourly_long/
-│   │   ├── profile_metrics/
-│   │   ├── outliers/
-│   │   ├── factors/
-│   │   │   ├── weather/
-│   │   │   ├── holidays/
-│   │   │   └── tariff/
-│   │   └── prosumers/
-│   └── reference/
-│       └── weather/
+│   ├── raw/
+│   │   └── <source-meter-file>.xlsx
+│   ├── processed/
+│   │   ├── hourly_long/
+│   │   ├── profile_metrics/
+│   │   ├── outliers/
+│   │   ├── factors/
+│   │   │   ├── weather/
+│   │   │   ├── holidays/
+│   │   │   └── tariff/
+│   │   └── prosumers/
+│   └── reference/
+│       └── weather/
 ├── reports/
-│   ├── figures/
-│   ├── hapi_1_data_quality.xlsx
-│   ├── hapi_3_profile_metrics.xlsx
-│   ├── hapi_4_1_hourly_outliers.xlsx
-│   ├── hapi_4_3_final_outliers.xlsx
-│   ├── hapi_5_weather.xlsx
-│   ├── hapi_5_holidays.xlsx
-│   ├── hapi_5_tariff.xlsx
-│   ├── hapi_6_clustering.xlsx
-│   ├── hapi_6_elbow.png
-│   ├── hapi_6_silhouette.png
-│   └── hapi_prosumers.xlsx
+│   ├── figures/
+│   ├── hapi_1_data_quality.xlsx
+│   ├── hapi_3_profile_metrics.xlsx
+│   ├── hapi_4_1_hourly_outliers.xlsx
+│   ├── hapi_4_3_final_outliers.xlsx
+│   ├── hapi_5_weather.xlsx
+│   ├── hapi_5_holidays.xlsx
+│   ├── hapi_5_tariff.xlsx
+│   ├── hapi_6_clustering.xlsx
+│   ├── hapi_6_elbow.png
+│   ├── hapi_6_silhouette.png
+│   └── hapi_prosumers.xlsx
 ├── src/
-│   ├── config.py
-│   ├── loader.py
-│   ├── pipeline.py
-│   ├── quality.py
-│   ├── reshape.py
-│   ├── metrics.py
-│   ├── outliers.py
-│   ├── weather.py
-│   ├── holidays.py
-│   ├── tariff.py
-│   ├── clustering.py
-│   └── prosumers.py
+│   ├── config.py
+│   ├── loader.py
+│   ├── pipeline.py
+│   ├── quality.py
+│   ├── reshape.py
+│   ├── metrics.py
+│   ├── outliers.py
+│   ├── weather.py
+│   ├── holidays.py
+│   ├── tariff.py
+│   ├── clustering.py
+│   └── prosumers.py
 ├── tests/
 ├── ui/
-│   ├── app.py
-│   ├── components/
-│   └── pages/
-│       ├── data_quality.py
-│       ├── company_profiles.py
-│       ├── meter_analysis.py
-│       ├── outliers.py
-│       ├── external_factors.py
-│       ├── clustering.py
-│       └── prosumers.py
+│   ├── app.py
+│   ├── components/
+│   └── pages/
+│       ├── data_quality.py
+│       ├── company_profiles.py
+│       ├── meter_analysis.py
+│       ├── outliers.py
+│       ├── external_factors.py
+│       ├── clustering.py
+│       └── prosumers.py
 ├── README.md
 └── requirements.txt
 ```
-
-## 5. Installation
-
+**## 5. Installation**
 Clone the repository:
 ```bash
 git clone <repository-url>
 cd Enerco-Consumption-Analysis
 ```
 Create a virtual environment.
-
-### Windows PowerShell
-
+**### Windows PowerShell**
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
-
-### Git Bash
-
+**### Git Bash**
 ```bash
 python -m venv .venv
 source .venv/Scripts/activate
@@ -154,9 +137,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 Run all commands from the repository root unless stated otherwise.
-
-## 6. Source Data Setup
-
+**## 6. Source Data Setup**
 The anonymized source Excel workbook is not included in the repository and must be added manually before the pipeline is executed.
 Place the workbook inside:
 ```text
@@ -166,7 +147,7 @@ Example:
 ```text
 data/
 └── raw/
-    └── Enerco_June_2025-June_2026_Hourly_Interval_Meters_ANONYMIZED.xlsx
+    └── Enerco_June_2025-June_2026_Hourly_Interval_Meters_ANONYMIZED.xlsx
 ```
 The configured file path must match the source path defined in:
 ```text
@@ -182,9 +163,7 @@ Meters 1-100
 Prosumer
 ```
 Do not commit confidential or non-anonymized customer data to the repository.
-
-## 7. Run the Full Pipeline
-
+**## 7. Run the Full Pipeline**
 Run the complete analytical workflow with:
 ```bash
 python -m src.pipeline
@@ -211,9 +190,7 @@ Generated reports and figures are written to:
 ```text
 reports/
 ```
-
-### Run a single stage
-
+**### Run a single stage**
 For development or troubleshooting, modules can still be executed individually:
 ```bash
 python -m src.quality
@@ -221,12 +198,9 @@ python -m src.metrics
 python -m src.outliers
 ```
 For a normal complete run, use `python -m src.pipeline`.
-
-## 8. Pipeline Stages
-
-### 8.1 Data Quality
-
-**Module:** `src/quality.py`
+**## 8. Pipeline Stages**
+**### 8.1 Data Quality**
+**\*\*Module:\*\*** `src/quality.py`
 This stage checks all meter and prosumer series before downstream analysis.
 Checks include:
 - missing observations
@@ -254,11 +228,9 @@ Unusable: 204
 Full-period coverage: 190
 Partial-period coverage: 327
 ```
-**Report:** `reports/hapi_1_data_quality.xlsx`
-
-### 8.2 Wide-to-Long Transformation
-
-**Module:** `src/reshape.py`
+**\*\*Report:\*\*** `reports/hapi_1_data_quality.xlsx`
+**### 8.2 Wide-to-Long Transformation**
+**\*\*Module:\*\*** `src/reshape.py`
 The source workbook contains hourly measurements across several sheets and columns. This stage converts those measurements into normalized long-format records.
 Typical fields include:
 ```text
@@ -274,13 +246,11 @@ Current validated result:
 Measurement series: 517
 Long-format rows: 4,901,160
 ```
-**Output:** `data/processed/hourly_long/`
+**\*\*Output:\*\*** `data/processed/hourly_long/`
 The data is stored as multiple Parquet files for more efficient processing.
 If verified company metadata is not provided, metadata fields are marked as pending mapping rather than inferred.
-
-### 8.3 Company and Meter Profiles
-
-**Module:** `src/metrics.py`
+**### 8.3 Company and Meter Profiles**
+**\*\*Module:\*\*** `src/metrics.py`
 This stage calculates annual profile metrics at company and meter level.
 Main metrics include:
 - total, mean, and maximum consumption
@@ -296,23 +266,21 @@ Main metrics include:
 - trend percentage.
 Current validated result:
 ```text
-Companies analyzed: 66
-Consumption meters analyzed: 300
-Seasonality:
-Winter: 42
-Summer: 4
-None: 20
+Companies analyzed: 81
+Consumption meters analyzed: 483
 ```
 Outputs:
 ```text
 data/processed/profile_metrics/
 reports/hapi_3_profile_metrics.xlsx
+data/processed/profile_metrics/portfolio_profile.parquet
+data/processed/profile_metrics/portfolio_monthly.parquet
+data/processed/profile_metrics/portfolio_hourly_profile.parquet
 ```
 These datasets are also used by the company-profile, meter-analysis, and clustering dashboard pages.
-
-### 8.4 Outlier Detection
-
-**Module:** `src/outliers.py`
+Supported analyses include a **Të gjitha kompanitë** option. When selected, the underlying hourly company data is aggregated first and visualized as one combined portfolio graph rather than as separate company lines.
+**### 8.4 Outlier Detection**
+**\*\*Module:\*\*** `src/outliers.py`
 Consumption is analyzed at company-hour level.
 A Z-score is calculated using the company consumption distribution:
 ```text
@@ -339,10 +307,8 @@ reports/hapi_4_3_final_outliers.xlsx
 ```
 Sector-level comparison is skipped when verified sector metadata is unavailable.
 An outlier represents statistically unusual behavior; it does not automatically indicate a measurement error or technical fault.
-
-### 8.5 Weather, HDD, and CDD
-
-**Module:** `src/weather.py`
+**### 8.5 Weather, HDD, and CDD**
+**\*\*Module:\*\*** `src/weather.py`
 Weather analysis uses Prishtina as the reference location.
 The stage analyzes:
 - temperature
@@ -372,11 +338,9 @@ data/processed/factors/weather/
 reports/hapi_5_weather.xlsx
 reports/figures/weather/
 ```
-
-### 8.6 Official Holiday Analysis
-
-**Module:** `src/holidays.py`
-This stage compares portfolio consumption on official observed holidays with comparable non-holiday periods.
+**### 8.6 Official Holiday Analysis**
+**\*\*Module:\*\*** `src/holidays.py`
+This stage compares portfolio consumption on official observed holidays with comparable non-holiday periods. Holiday and hourly holiday charts already use the combined portfolio, so no additional company selector is required for the portfolio view.
 The analysis includes:
 - holiday dates present in the dataset
 - holiday consumption
@@ -397,10 +361,8 @@ Outputs:
 data/processed/factors/holidays/
 reports/hapi_5_holidays.xlsx
 ```
-
-### 8.7 Tariff Analysis
-
-**Module:** `src/tariff.py`
+**### 8.7 Tariff Analysis**
+**\*\*Module:\*\*** `src/tariff.py`
 Consumption is separated into:
 ```text
 T1
@@ -419,10 +381,8 @@ Outputs:
 data/processed/factors/tariff/
 reports/hapi_5_tariff.xlsx
 ```
-
-### 8.8 Company Clustering
-
-**Module:** `src/clustering.py`
+**### 8.8 Company Clustering**
+**\*\*Module:\*\*** `src/clustering.py`
 K-Means clustering groups companies according to similarities in annual consumption behavior.
 Features used:
 ```text
@@ -437,14 +397,13 @@ Features are standardized before clustering.
 Candidate values of `k` are evaluated using inertia and Silhouette Score.
 Current validated result:
 ```text
-Companies available: 66
-Companies clustered: 65
-Companies excluded: 1
+Companies available: 81
+Companies clustered: 81
+Companies excluded: 0
 Evaluated k: 2-10
 Best k: 2
-Best Silhouette Score: 0.4577
-Cluster 0: 54 companies
-Cluster 1: 11 companies
+Cluster 0: 65 companies
+Cluster 1: 16 companies
 ```
 Outputs:
 ```text
@@ -453,11 +412,10 @@ reports/hapi_6_elbow.png
 reports/hapi_6_silhouette.png
 ```
 Cluster IDs are model labels only and do not indicate better or worse performance.
+From the **Kompanitë** tab in the dashboard, the company lists can be exported to Excel. The export creates separate sheets for each clustering group, for example `Grupi_1` and `Grupi_2`.
 Sector comparison is skipped when verified sector metadata is unavailable.
-
-### 8.9 Prosumer Analysis
-
-**Module:** `src/prosumers.py`
+**### 8.9 Prosumer Analysis**
+**\*\*Module:\*\*** `src/prosumers.py`
 The prosumer source contains paired flow measurements:
 ```text
 A+ = electricity consumed from the grid
@@ -492,17 +450,15 @@ data/processed/prosumers/
 reports/hapi_prosumers.xlsx
 reports/figures/prosumers/
 ```
-
-## 9. Streamlit Dashboard
-
+**## 9. Streamlit Dashboard**
 After the pipeline has generated the required outputs, start the application with:
 ```bash
 streamlit run ui/app.py
 ```
-**Main entry point:** `ui/app.py`
+**\*\*Main entry point:\*\*** `ui/app.py`
 Streamlit normally opens a local URL similar to:
 ```text
-http://localhost:8501
+http\://localhost:8501
 ```
 Dashboard pages:
 ```text
@@ -516,19 +472,17 @@ Prosumerët
 Faktorët shtesë
 ```
 The dashboard is primarily in Albanian because it is intended for internal analytical use.
+Supported company-level analyses include a **Të gjitha kompanitë** option. This combines the available data from all analyzed companies into a single portfolio view for aggregate charts such as hourly profiles and monthly trends. Clustering remains company-level by design because K-Means requires companies to remain separate observations.
+The clustering page also supports Excel export of company lists by group.
 Source-code identifiers, technical field names, and file paths remain in English.
-
-### Start only the dashboard
-
+**### Start only the dashboard**
 If the processed datasets and reports already exist, the pipeline does not have to be rerun.
 Start directly with:
 ```bash
 streamlit run ui/app.py
 ```
 Rerun the analytical pipeline when the source workbook or processing logic changes, or when generated outputs need to be refreshed.
-
-## 10. Main Outputs
-
+**## 10. Main Outputs**
 | Area | Main output |
 |---|---|
 | Data quality | `reports/hapi_1_data_quality.xlsx` |
@@ -538,21 +492,16 @@ Rerun the analytical pipeline when the source workbook or processing logic chang
 | Weather | `reports/hapi_5_weather.xlsx` |
 | Holidays | `reports/hapi_5_holidays.xlsx` |
 | Tariff | `reports/hapi_5_tariff.xlsx` |
-| Clustering | `reports/hapi_6_clustering.xlsx` |
+| Clustering | `reports/hapi_6_clustering.xlsx` + dashboard Excel export by group |
 | Prosumers | `reports/hapi_prosumers.xlsx` |
 Processed Parquet datasets are stored under `data/processed/`.
 Figures are stored under `reports/` and `reports/figures/`.
-
-## 11. Tests
-
+**## 11. Tests**
 Run the complete automated test suite:
 ```bash
 python -m pytest -q
 ```
-Current validated result:
-```text
-68 passed
-```
+Run the suite after changes and confirm all tests pass.
 Run a specific test file when needed:
 ```bash
 python -m pytest tests/test_metrics.py -q
@@ -561,9 +510,7 @@ Example:
 ```bash
 python -m pytest tests/test_outliers.py -q
 ```
-
-## 12. Compilation Check
-
+**## 12. Compilation Check**
 Check Python source files for syntax and import-level compilation issues:
 ```bash
 python -m compileall src ui tests
@@ -574,9 +521,7 @@ src/
 ui/
 tests/
 ```
-
-## 13. Recommended Final Validation
-
+**## 13. Recommended Final Validation**
 Before committing or delivering the project, run:
 ```bash
 python -m pytest -q
@@ -591,11 +536,8 @@ A fully committed repository should return:
 ```text
 nothing to commit, working tree clean
 ```
-
-## 14. Known Limitations
-
-### Business metadata
-
+**## 14. Known Limitations**
+**### Business metadata**
 The anonymized source data does not contain verified mappings for:
 ```text
 business_sector
@@ -610,14 +552,10 @@ Therefore:
 - voltage-level comparison is unavailable
 - TS/network grouping is unavailable.
 The relevant metadata fields remain in the processing structure so verified mappings can be added later.
-
-### Weather dependency
-
+**### Weather dependency**
 Weather data is obtained from an external public source.
 The implementation uses retries and a local cached fallback. If both the API and local cache are unavailable, weather-dependent analysis cannot be regenerated.
-
-### Statistical interpretation
-
+**### Statistical interpretation**
 Outliers, correlations, clusters, seasonality classes, and trends are analytical indicators.
 They should not automatically be interpreted as:
 - equipment failure
@@ -626,18 +564,14 @@ They should not automatically be interpreted as:
 - causal relationships
 - operational faults.
 Technical and business interpretation is still required.
-
-## 15. Data Privacy
-
+**## 15. Data Privacy**
 The project uses anonymized company and meter identifiers.
 No mapping between anonymized identifiers and real customer identities is included in the repository.
 Confidential mappings, credentials, and non-anonymized customer data should remain outside version control unless explicitly authorized.
-
-## 16. Current Validation Status
-
-The current implementation has been validated with:
-```text
-68 automated tests passed
+**## 16. Current Validation Status**
+Validate the current implementation with:
+```bash
+python -m pytest -q
 ```
 Compilation:
 ```bash
